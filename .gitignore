@@ -1,0 +1,139 @@
+# ============================================================================
+# GITIGNORE - Sistema de Gestión de Horarios
+# ============================================================================
+# Este archivo protege información sensible y archivos innecesarios
+
+# ============================================================================
+# 🔐 ARCHIVOS SENSIBLES (NUNCA SUBIR A GITHUB)
+# ============================================================================
+
+# Variables de entorno - Contienen contraseñas de base de datos
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+.env.*.local
+server/.env
+**/.env
+
+# Archivos de configuración con credenciales
+config.local.js
+config.local.json
+secrets.json
+credentials.json
+
+# Backups de base de datos (pueden contener datos sensibles)
+*.sql.backup
+*.dump
+backup/
+backups/
+
+# ============================================================================
+# 📦 DEPENDENCIAS Y BUILD
+# ============================================================================
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+out/
+.next/
+
+# ============================================================================
+# 🔧 ARCHIVOS DEL EDITOR
+# ============================================================================
+
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# JetBrains IDEs (WebStorm, IntelliJ, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ============================================================================
+# 💻 SISTEMA OPERATIVO
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================================================
+# 🧪 TESTING Y COVERAGE
+# ============================================================================
+
+coverage/
+*.lcov
+.nyc_output/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ============================================================================
+# 📝 LOGS Y TEMPORALES
+# ============================================================================
+
+logs/
+*.log
+*.log.*
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ============================================================================
+# 🎯 ARCHIVOS LOCALES ESPECÍFICOS DEL PROYECTO
+# ============================================================================
+
+# Archivos locales de desarrollo
+*.local
+
+# Cache
+.cache/
+.parcel-cache/
+.vite/
+
+# ============================================================================
+# FIN DEL GITIGNORE
+# ============================================================================
