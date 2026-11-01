@@ -9,6 +9,7 @@ import courseRoutes from './routes/courses';
 import authRoutes from './routes/auth';
 import classroomRoutes from './routes/classrooms';
 import assignmentsRouter from './routes/assignments'; // Added this import
+import adjudicacionRoutes from './routes/adjudicacion'; // Fusión EPI Scheduler
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/semesters', semesterRoutes);
 app.use('/api/courses', courseRoutes); // Kept original variable name as per "unrelated edits" rule
 app.use('/api/classrooms', classroomRoutes); // Kept original variable name as per "unrelated edits" rule
 app.use('/api/assignments', assignmentsRouter); // Added assignments route
+app.use('/api/adjudicacion', adjudicacionRoutes); // Fusión EPI Scheduler
 
 // Basic test endpoint
 
@@ -40,6 +42,17 @@ app.get('/api/test-db', async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Database connection error:', error);
         res.status(500).json({ error: 'Failed to connect to database', details: error });
+    }
+});
+
+// Estado del microservicio solver (Python / OR-Tools)
+app.get('/api/solver/health', async (req: Request, res: Response) => {
+    const url = process.env.SOLVER_URL || 'http://localhost:5000';
+    try {
+        const r = await (globalThis as any).fetch(`${url}/health`);
+        res.json({ solver_status: 'ok', info: await r.json() });
+    } catch (e) {
+        res.status(503).json({ solver_status: 'unavailable', hint: 'cd solver_service && uvicorn main:app --port 5000' });
     }
 });
 

@@ -4,6 +4,11 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 const router = Router();
 
+// Horas reglamentarias semanales por categoría (fusión EPI Scheduler)
+const CATEGORY_HOURS: Record<string, number> = { Principal: 20, Asociado: 18, Auxiliar: 16, Contratado: 12 };
+const hoursFor = (category: string, override?: number) =>
+    override && override > 0 ? override : (CATEGORY_HOURS[category] ?? 12);
+
 // GET ALL Teachers
 router.get('/', async (req: Request, res: Response) => {
     try {
@@ -11,6 +16,19 @@ router.get('/', async (req: Request, res: Response) => {
         res.json(rows);
     } catch (error) {
         console.error('Error fetching teachers:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// GET Teachers in adjudication order (Principal → Asociado → Auxiliar → Contratado, then `orden`)
+router.get('/ordered', async (req: Request, res: Response) => {
+    try {
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `SELECT id, name, category, orden, required_hours FROM teachers WHERE role = 'DOCENTE'
+             ORDER BY FIELD(category,'Principal','Asociado','Auxiliar','Contratado'), orden, id`);
+        res.json(rows.map((t, i) => ({ turno: i + 1, ...t })));
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
@@ -74,13 +92,14 @@ router.post('/:id/availability', async (req: Request, res: Response) => {
 
 // CREATE Teacher
 router.post('/', async (req: Request, res: Response) => {
-    const { name, email, category, code, avatar, max_hours, role } = req.body;
+    const { name, email, category, code, avatar, max_hours, role, required_hours, orden } = req.body;
+    const reqHours = hoursFor(category, required_hours);
     try {
         const [result] = await pool.query<ResultSetHeader>(
-            'INSERT INTO teachers (name, email, category, code, avatar, max_hours, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, email, category, code, avatar, max_hours || 20, role || 'DOCENTE']
+            'INSERT INTO teachers (name, email, category, code, avatar, max_hours, role, required_hours, orden) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, email, category, code, avatar, max_hours || 20, role || 'DOCENTE', reqHours, orden || 999]
         );
-        res.json({ id: result.insertId, ...req.body });
+        res.json({ id: result.insertId, ...req.body, required_hours: reqHours, orden: orden || 999 });
     } catch (error: any) {
         if (error.code === 'ER_DUP_ENTRY') {
             res.status(409).json({ error: 'Email or Code already exists' });
@@ -93,11 +112,11 @@ router.post('/', async (req: Request, res: Response) => {
 
 // UPDATE Teacher
 router.put('/:id', async (req: Request, res: Response) => {
-    const { name, email, category, code, avatar, max_hours, role } = req.body;
+    const { name, email, category, code, avatar, max_hours, role, required_hours, orden } = req.body;
     try {
         await pool.query(
-            'UPDATE teachers SET name = ?, email = ?, category = ?, code = ?, avatar = ?, max_hours = ?, role = ? WHERE id = ?',
-            [name, email, category, code, avatar, max_hours, role, req.params.id]
+            'UPDATE teachers SET name = ?, email = ?, category = ?, code = ?, avatar = ?, max_hours = ?, role = ?, required_hours = ?, orden = ? WHERE id = ?',
+            [name, email, category, code, avatar, max_hours, role, hoursFor(category, required_hours), orden || 999, req.params.id]
         );
         res.json({ message: 'Teacher updated successfully' });
     } catch (error) {

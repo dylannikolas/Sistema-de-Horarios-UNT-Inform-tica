@@ -7,7 +7,9 @@ const router = Router();
 const SECRET_KEY = process.env.JWT_SECRET || 'secret-key-change-me';
 
 router.post('/register', async (req: Request, res: Response) => {
-    const { name, code, email, category, password, role } = req.body;
+    const { name, code, email, category, password, role, orden } = req.body;
+    const CATEGORY_HOURS: Record<string, number> = { Principal: 20, Asociado: 18, Auxiliar: 16, Contratado: 12 };
+    const requiredHours = CATEGORY_HOURS[category] ?? 12;
 
     if (!email || !password || !name || !role) {
         res.status(400).json({ error: 'Faltan campos obligatorios' });
@@ -39,8 +41,8 @@ router.post('/register', async (req: Request, res: Response) => {
                 // Crear nuevo docente
                 // Let DB handle ID generation (AUTO_INCREMENT)
                 const [result] = await connection.query<any>(
-                    'INSERT INTO teachers (name, email, code, category, max_hours, role) VALUES (?, ?, ?, ?, ?, ?)',
-                    [name, email, code, category || 'Contratado', 20, 'DOCENTE']
+                    'INSERT INTO teachers (name, email, code, category, max_hours, role, required_hours, orden) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [name, email, code, category || 'Contratado', 20, 'DOCENTE', requiredHours, orden || 999]
                 );
                 teacherId = result.insertId;
             }
