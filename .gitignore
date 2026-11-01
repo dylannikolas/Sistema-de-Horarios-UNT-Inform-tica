@@ -137,3 +137,11 @@ temp/
 # ============================================================================
 # FIN DEL GITIGNORE
 # ============================================================================
+
+# --- Python / solver / CLI (fusión EPI) ---
+__pycache__/
+*.pyc
+.venv/
+solver_service/.venv/
+cli_epi_scheduler/versions/
+cli_epi_scheduler/outputs/
