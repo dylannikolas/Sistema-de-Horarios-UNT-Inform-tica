@@ -113,7 +113,7 @@ Entorno de prueba: **MariaDB 10.11**, Node (ts-node), Python 3 + FastAPI + OR-To
 
 ## 6. Lo que NO está verificado (límites honestos)
 
-- ⚠️ **Escala real no probada.** Lancé la prueba de un semestre completo (ciclos 2, 4, 6, 8, 10 × A/B, 22 docentes, 360 h): la adjudicación terminó (22 docentes exactos en 0,4 s, pool de 136 sesiones = 360 h), pero el solver no llegó a terminar porque el entorno se reinició y mató el proceso. **No conozco el tiempo del solver a esa escala.** El entorno de prueba tiene 1 solo núcleo.
+- ✅/⚠️ **Escala real probada (semestre completo):** ciclos 2, 4, 6, 8, 10 × A/B, 22 docentes (4 Principal + 6 Asociado + 7 Auxiliar + 5 Contratado = 360 h), disponibilidad total Lun–Vie. La adjudicación cerró con los 22 docentes exactos (pool de 136 sesiones = 360 h). El solver devolvió `OK` con **144 bloques** usando todo el límite de 240 s, en un entorno de **1 solo núcleo** (la primera solución apareció antes, pero ese instante no se midió). La verificación independiente en la BD confirma: sin cruces de docente, aula ni sección, laboratorios de 4 h en aulas de laboratorio y todo dentro de la disponibilidad. **Un bloque de 144 quedó sin aula** (10B Sistemas de información, teoría, viernes 07:00), por lo que un docente quedó con 10 h guardadas en vez de 12 h: es la limitación de la sección 7 (el solver no modela aulas). No se probó con disponibilidades reales restringidas, ni el tope de 18 h de la pantalla de SHARPEI frente a las 20 h de un Principal.
 - ⚠️ La prueba usó **disponibilidad total** Lun–Vie 07–21. Con disponibilidades reales y restringidas el solver podría ser INFEASIBLE; el pre-chequeo avisa los casos obvios, pero no se probó con datos parciales reales.
 - ⚠️ Solo probado en **MariaDB 10.11**; no en MySQL 8 ni en tu XAMPP.
 - ⚠️ **Concurrencia:** la clave única está comprobada por SQL, pero no con dos peticiones simultáneas reales.
@@ -139,7 +139,7 @@ Entorno de prueba: **MariaDB 10.11**, Node (ts-node), Python 3 + FastAPI + OR-To
 
 | # | Tarea | Notas |
 |---|---|---|
-| 1 | **Decidir regla de aulas** | ¿La práctica puede ir a laboratorio? ¿Modelar aulas dentro de CP-SAT (capacidad simultánea) para evitar sesiones "sin aula"? |
+| 1 | **Decidir regla de aulas y modelarlas en CP-SAT** | ¿La práctica puede ir a laboratorio? La prueba a escala dejó 1 bloque sin aula de 144. Hay un parche en curso (capacidad de aulas por franja), aún sin probar y por eso no incluido. SHARPEI trae 20 aulas de muestra (7 teóricas, 13 de laboratorio) que **no son las reales de la EPI**: hay que poder indicar qué aulas cuentan |
 | 2 | **Prueba a escala real** | 5 ciclos × A/B con ~22 docentes; medir tiempo; ajustar parámetros del solver |
 | 3 | **Prueba con disponibilidades reales** | Cargar la disponibilidad real de los docentes y ver si hay solución |
 | 4 | **Pantallas React de adjudicación** | turno actual, selección, confirmar, saltar, resumen, generar, resultado |
