@@ -136,57 +136,26 @@ def build_and_solve(sections: List[SectionData],
                             slot_vars.append(lab_vars[(sid,ci,d,s-1)])
                 model.AddAtMostOne(slot_vars)
 
-    # ── C5: Horas totales por docente = required_hours ────────────────────────
-    # Se computa en bloques de 2h:
-    #   teoria_var  → 1 bloque (2h)
-    #   practica_var→ 1 bloque (2h)
-    #   lab_var     → 2 bloques (4h)  ← multiplicado por 2
-    teacher_hour_vars: Dict[str, list] = {tid: [] for tid in teachers}
-
+    # ── C5: horas por docente = horas reglamentarias ─────────────────────────
+    # Cada bloque se asigna exactamente una vez (C1), así que las horas de un docente
+    # quedan fijadas por la adjudicación y no dependen de dónde se ubique cada sesión.
+    # Por eso C5 es un pre-chequeo: cuenta los bloques adjudicados (teoría y práctica =
+    # 1 bloque de 2h cada uno; laboratorio = 2 bloques) y avisa qué docente no cuadra,
+    # en lugar de devolver un INFEASIBLE sin explicación.
+    assigned_blocks = {tid: 0 for tid in teachers}
     for sec in sections:
-        sid = sec.section_id
-        for ci, course in enumerate(sec.schedulable_courses):
-            if course.theory_teacher_id and course.theory_teacher_id in teacher_hour_vars:
-                tid = course.theory_teacher_id
-                for b in range(course.n_theory_blocks):
-                    for d in range(NUM_DAYS):
-                        for s in range(NUM_SLOTS):
-                            teacher_hour_vars[tid].append(
-                                (1, theory_vars[(sid,ci,b,d,s)]))
-            if course.practice_teacher_id and course.practice_teacher_id in teacher_hour_vars:
-                tid = course.practice_teacher_id
-                for b in range(course.n_practice_blocks):
-                    for d in range(NUM_DAYS):
-                        for s in range(NUM_SLOTS):
-                            teacher_hour_vars[tid].append(
-                                (1, pract_vars[(sid,ci,b,d,s)]))
-            if course.has_lab and course.lab_teacher_id and course.lab_teacher_id in teacher_hour_vars:
-                tid = course.lab_teacher_id
-                for d in range(NUM_DAYS):
-                    for s in range(NUM_SLOTS-1):
-                        # lab_var cubre 2 bloques de 2h = 4h
-                        teacher_hour_vars[tid].append(
-                            (2, lab_vars[(sid,ci,d,s)]))
-
-    # Cada bloque se asigna exactamente una vez (C1), por lo que las horas de un
-    # docente quedan fijadas por la adjudicación y no dependen de dónde se ubique
-    # cada sesión. C5 se aplica como pre-chequeo explícito: si la carga adjudicada
-    # no es exacta, se avisa qué docente no cuadra en vez de devolver INFEASIBLE.
-    hours_warnings = []
+        for course in sec.schedulable_courses:
+            if course.theory_teacher_id in assigned_blocks:
+                assigned_blocks[course.theory_teacher_id] += course.n_theory_blocks
+            if course.practice_teacher_id in assigned_blocks:
+                assigned_blocks[course.practice_teacher_id] += course.n_practice_blocks
+            if course.has_lab and course.lab_teacher_id in assigned_blocks:
+                assigned_blocks[course.lab_teacher_id] += 2
     for tid, teacher in teachers.items():
-        hour_items = teacher_hour_vars.get(tid, [])
-        if not hour_items or teacher.required_hours == 0:
-            continue
-        assigned_blocks = sum(coef for coef, _ in hour_items)
-        required_blocks = teacher.required_hours // 2
-        if assigned_blocks == required_blocks:
-            model.Add(sum(coef * var for coef, var in hour_items) == required_blocks)
-        else:
-            hours_warnings.append(
-                f"{teacher.name}: adjudicadas {assigned_blocks*2}h, "
-                f"reglamentarias {teacher.required_hours}h")
-    for w in hours_warnings:
-        print(f"  ⚠ Carga no exacta -> {w}")
+        blocks = assigned_blocks[tid]
+        if blocks and teacher.required_hours and blocks * 2 != teacher.required_hours:
+            print(f"  ⚠ Carga no exacta -> {teacher.name}: adjudicadas {blocks * 2}h, "
+                  f"reglamentarias {teacher.required_hours}h")
 
     # ── Objetivo: compactar horario ───────────────────────────────────────────
     penalty = []

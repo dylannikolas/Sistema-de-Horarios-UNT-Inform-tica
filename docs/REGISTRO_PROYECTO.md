@@ -56,7 +56,7 @@ React (SHARPEI, sin cambios)  ──►  Node + Express + MariaDB/MySQL (SHARPEI
 
 ### Restricciones del solver (CP-SAT)
 C1 cada bloque se asigna una vez · C2 solo en disponibilidad del docente · C3 un docente no puede estar en dos sitios a la vez (global) · C4 una sección no puede tener dos clases a la vez · C5 horas por docente = reglamentarias (ver nota) · objetivo: compactar el horario.
-*Nota C5:* como cada bloque se asigna exactamente una vez, las horas de un docente quedan fijadas por la adjudicación. Se dejó como **pre-chequeo explícito** que avisa qué docente no cuadra, en lugar de devolver un INFEASIBLE sin explicación.
+*Nota C5:* como cada bloque se asigna exactamente una vez, las horas de un docente quedan fijadas por la adjudicación. Se dejó como **pre-chequeo explícito** (cuenta los bloques adjudicados) que avisa qué docente no cuadra, en lugar de devolver un INFEASIBLE sin explicación. *La primera versión de ese pre-chequeo contaba variables en vez de bloques (42 por bloque) y avisaba en falso «504 h vs 12 h»; se corrigió el 31/10 y se probó: silencioso con carga exacta, avisa con 14 h vs 12 h.*
 
 ### Cambios en SHARPEI (parche mínimo, no reemplazos completos)
 | Archivo | Cambio |
@@ -86,6 +86,7 @@ C1 cada bloque se asigna una vez · C2 solo en disponibilidad del docente · C3 
 | Reemplazar `teachers.ts`, `auth.ts`, `index.ts` completos | Riesgo de perder código de SHARPEI; ahora son parches mínimos sobre los originales |
 | Enviaba `hours` desde el cliente | Ahora las horas se calculan en el servidor desde la malla |
 | `tsc`/pruebas "pasan" en la primera versión | La primera versión nunca se compiló contra el repo real; el `tsc` real encontró un error de tipos (corregido) |
+| Pre-chequeo C5 "corregido" y dado por bueno | Estaba mal (contaba variables, no bloques) y no lo vi en las primeras pruebas porque no revisé el log del solver; lo detecté al revisar la prueba a escala |
 | `ADD COLUMN IF NOT EXISTS` en SQL | No existe en MySQL 8; la migración se reescribió en TypeScript con `information_schema` |
 
 Hallazgos en **SHARPEI** (no corregidos, fuera de nuestro código):
@@ -112,7 +113,7 @@ Entorno de prueba: **MariaDB 10.11**, Node (ts-node), Python 3 + FastAPI + OR-To
 
 ## 6. Lo que NO está verificado (límites honestos)
 
-- ⚠️ **Escala real no probada.** No corrí un semestre completo (ciclos 2, 4, 6, 8, 10 × A/B, ~22 docentes). No conozco el tiempo del solver a esa escala.
+- ⚠️ **Escala real no probada.** Lancé la prueba de un semestre completo (ciclos 2, 4, 6, 8, 10 × A/B, 22 docentes, 360 h): la adjudicación terminó (22 docentes exactos en 0,4 s, pool de 136 sesiones = 360 h), pero el solver no llegó a terminar porque el entorno se reinició y mató el proceso. **No conozco el tiempo del solver a esa escala.** El entorno de prueba tiene 1 solo núcleo.
 - ⚠️ La prueba usó **disponibilidad total** Lun–Vie 07–21. Con disponibilidades reales y restringidas el solver podría ser INFEASIBLE; el pre-chequeo avisa los casos obvios, pero no se probó con datos parciales reales.
 - ⚠️ Solo probado en **MariaDB 10.11**; no en MySQL 8 ni en tu XAMPP.
 - ⚠️ **Concurrencia:** la clave única está comprobada por SQL, pero no con dos peticiones simultáneas reales.
