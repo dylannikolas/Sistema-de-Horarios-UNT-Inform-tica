@@ -1,12 +1,12 @@
 @echo off
-title Sistema de Horarios UNT - Iniciando...
+title Sistema de Horarios UNT (SHARPEI + EPI Solver) - Iniciando...
 color 0A
 
 echo.
-echo ========================================
-echo   SISTEMA DE HORARIOS UNT
-echo   Iniciando proyecto completo...
-echo ========================================
+echo ========================================================
+echo   SISTEMA DE HORARIOS UNT - ESCUELA DE INFORMATICA
+echo   SHARPEI + EPI Scheduler (CP-SAT OR-Tools)
+echo ========================================================
 echo.
 
 REM Verificar que Node.js este instalado
@@ -32,54 +32,44 @@ if not exist "server\node_modules" (
 )
 
 echo.
-echo [1/3] Iniciando servidor backend...
-echo.
+echo [1/4] Iniciando microservicio CP-SAT Solver (Python FastAPI - Puerto 5000)...
+start "Solver CP-SAT - Puerto 5000" cmd /k "cd solver_service && python -m uvicorn main:app --port 5000"
 
-REM Iniciar el backend en una nueva ventana
+timeout /t 2 /nobreak >nul
+
+echo.
+echo [2/4] Iniciando servidor backend Node/Express (Puerto 3001)...
 start "Backend - Puerto 3001" cmd /k "cd server && npm run dev"
 
-REM Esperar 3 segundos para que el backend inicie
 timeout /t 3 /nobreak >nul
 
 echo.
-echo [2/3] Iniciando frontend...
-echo.
-
-REM Iniciar el frontend en una nueva ventana
+echo [3/4] Iniciando frontend React/Vite (Puerto 5173)...
 start "Frontend - Puerto 5173" cmd /k "npm run dev"
 
-REM Esperar 5 segundos para que el frontend compile
-timeout /t 5 /nobreak >nul
+timeout /t 4 /nobreak >nul
 
 echo.
-echo [3/3] Abriendo navegador...
-echo.
-
-REM Abrir el navegador
+echo [4/4] Abriendo navegador...
 start http://localhost:5173
 
 echo.
-echo ========================================
+echo ========================================================
 echo   PROYECTO INICIADO CORRECTAMENTE
-echo ========================================
+echo ========================================================
 echo.
-echo Backend:  http://localhost:3001
-echo Frontend: http://localhost:5173
+echo Solver CP-SAT: http://localhost:5000/health
+echo Backend API:   http://localhost:3001
+echo Frontend Web:  http://localhost:5173
 echo.
-echo Credenciales de Administrador:
-echo   Usuario: admin
+echo Credenciales de Director:
+echo   Usuario:  admin
 echo   Password: admin123
 echo.
 echo Credenciales de Docente (ejemplo):
-echo   Usuario: jgutierrez
+echo   Usuario:  jgutierrez
 echo   Password: DOC-01
 echo.
-echo ========================================
-echo.
-echo Para detener el proyecto:
-echo   - Cierra las ventanas de Backend y Frontend
-echo   - O presiona Ctrl+C en cada ventana
-echo.
-echo ========================================
+echo ========================================================
 echo.
 pause

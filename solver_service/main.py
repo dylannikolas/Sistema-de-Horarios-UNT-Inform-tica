@@ -2,7 +2,7 @@
 Microservicio del solver EPI (FastAPI + OR-Tools CP-SAT) para SHARPEI.
 Ejecutar:  uvicorn main:app --host 0.0.0.0 --port 5000
 """
-import os, sys
+import os, sys, tempfile
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "epi"))
-from models import (CATEGORY_REQUIRED_HOURS, DAYS, MALLA_REAL, NUM_SLOTS, TIME_SLOTS, Course,  # noqa: E402
+from models import (CATEGORY_REQUIRED_HOURS, DAYS, MALLA_REAL, NUM_DAYS, NUM_SLOTS, TIME_SLOTS, Course,  # noqa: E402
                     ScheduledSession, ScheduleResult, SectionData, Teacher)
 from solver import build_and_solve  # noqa: E402
 from excel_export import export_to_excel  # noqa: E402
@@ -56,6 +56,8 @@ class SolveRequest(BaseModel):
     semester_id: int = 0
     description: str = "Horario EPI"
     time_limit_seconds: float = 120.0
+    max_theory_rooms: int = 5
+    max_lab_rooms: int = 3
     teachers: List[TeacherIn]
     courses: List[CourseIn]
 
@@ -148,14 +150,27 @@ def solve(req: SolveRequest):
                             f"(07-09, 09-11, 11-13, ...); necesita {n} bloques")
         elif n and have < n:
             problems.append(f"{t.name}: tiene {have} bloques de 2h disponibles y necesita {n}")
+    # Pre-chequeo de capacidad global de aulas (Lun-Vie x 7 bloques)
+    total_tp_blocks = sum(c.n_theory_blocks + c.n_practice_blocks for sec in sections for c in sec.schedulable_courses)
+    total_lab_blocks = sum(2 for sec in sections for c in sec.schedulable_courses if c.has_lab)
+    max_tp_cap = NUM_DAYS * NUM_SLOTS * req.max_theory_rooms
+    max_lab_cap = NUM_DAYS * NUM_SLOTS * req.max_lab_rooms
+    if req.max_theory_rooms > 0 and total_tp_blocks > max_tp_cap:
+        problems.append(f"Capacidad insuficiente de aulas teóricas: se requieren {total_tp_blocks} bloques de 2h "
+                        f"y las {req.max_theory_rooms} aulas teóricas ofrecen máximo {max_tp_cap} bloques en Lun-Vie")
+    if req.max_lab_rooms > 0 and total_lab_blocks > max_lab_cap:
+        problems.append(f"Capacidad insuficiente de laboratorios: se requieren {total_lab_blocks} bloques de 2h "
+                        f"y los {req.max_lab_rooms} laboratorios ofrecen máximo {max_lab_cap} bloques en Lun-Vie")
+
     if problems:
         raise HTTPException(422, {"status": "SIN_DISPONIBILIDAD", "message": "; ".join(problems)})
 
     result = build_and_solve(sections=sections, teachers=epi_teachers,
-                             time_limit_seconds=req.time_limit_seconds, description=req.description)
+                             time_limit_seconds=req.time_limit_seconds, description=req.description,
+                             max_theory_rooms=req.max_theory_rooms, max_lab_rooms=req.max_lab_rooms)
     if result.status == "INFEASIBLE":
         raise HTTPException(422, {"status": "INFEASIBLE",
-                                  "message": "No existe horario que cumpla disponibilidad, sin cruces de docente ni de sección"})
+                                  "message": "No existe horario que cumpla disponibilidad, capacidad de aulas y sin cruces de docente ni de sección"})
     if not result.sessions:
         raise HTTPException(504, {"status": result.status, "message": "El solver no encontró solución en el tiempo límite"})
 
@@ -182,12 +197,15 @@ def export_excel(data: Dict[str, Any]):
         for s in data.get("sessions", []):
             start = next(i for i, t in enumerate(TIME_SLOTS) if t.startswith(s["start_time"][:5]))
             dur = max(1, int(s.get("duration_hours", 2)) // 2)
+            t_label = s.get("teacher_name", "—")
+            if s.get("classroom_name"):
+                t_label = f"{t_label} | {s['classroom_name']}"
             sessions.append(ScheduledSession(course_name=s["course_name"], section_id=s["section_id"],
-                                             session_type=s["session_type"], teacher_name=s.get("teacher_name", "—"),
+                                             session_type=s["session_type"], teacher_name=t_label,
                                              day_idx=DAY_IDX[s["day"]], slot_idx=start, duration_slots=dur))
         res = ScheduleResult(version_id=data.get("version_id", "EXPORT"), description="SHARPEI",
                              created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"), sessions=sessions, status="OK")
-        path = f"/tmp/Horario_{res.version_id}.xlsx"
+        path = os.path.join(tempfile.gettempdir(), f"Horario_{res.version_id}.xlsx")
         export_to_excel(res, path)
         return FileResponse(path, filename=os.path.basename(path),
                             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

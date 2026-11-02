@@ -20,7 +20,9 @@ import uuid
 def build_and_solve(sections: List[SectionData],
                     teachers: Dict[str, Teacher],
                     time_limit_seconds: float = 120.0,
-                    description: str = "") -> ScheduleResult:
+                    description: str = "",
+                    max_theory_rooms: int = 5,
+                    max_lab_rooms: int = 3) -> ScheduleResult:
 
     model  = cp_model.CpModel()
     solver = cp_model.CpSolver()
@@ -156,6 +158,43 @@ def build_and_solve(sections: List[SectionData],
         if blocks and teacher.required_hours and blocks * 2 != teacher.required_hours:
             print(f"  ⚠ Carga no exacta -> {teacher.name}: adjudicadas {blocks * 2}h, "
                   f"reglamentarias {teacher.required_hours}h")
+
+    # ── C6: Capacidad simultánea de aulas (Teoría+Práctica y Laboratorio) ────
+    # Regla EPI: Teoría y Práctica se dictan solo en aulas teóricas (Pool 17, Pool 18, Info 2, Info 3, Info 5);
+    # Laboratorio se dicta solo en laboratorios (Lab A, Lab B, Lab C).
+    for d in range(NUM_DAYS):
+        for s in range(NUM_SLOTS):
+            tp_at_slot = []
+            lab_at_slot = []
+            for sec in sections:
+                sid = sec.section_id
+                for ci, course in enumerate(sec.schedulable_courses):
+                    for b in range(course.n_theory_blocks):
+                        tp_at_slot.append(theory_vars[(sid,ci,b,d,s)])
+                    for b in range(course.n_practice_blocks):
+                        tp_at_slot.append(pract_vars[(sid,ci,b,d,s)])
+                    if course.has_lab:
+                        if s < NUM_SLOTS - 1 and (sid,ci,d,s) in lab_vars:
+                            lab_at_slot.append(lab_vars[(sid,ci,d,s)])
+                        if s > 0 and (sid,ci,d,s-1) in lab_vars:
+                            lab_at_slot.append(lab_vars[(sid,ci,d,s-1)])
+            if max_theory_rooms > 0 and len(tp_at_slot) > max_theory_rooms:
+                model.Add(sum(tp_at_slot) <= max_theory_rooms)
+            if max_lab_rooms > 0 and len(lab_at_slot) > max_lab_rooms:
+                model.Add(sum(lab_at_slot) <= max_lab_rooms)
+
+    # Ruptura de simetría para cursos con 2 bloques del mismo tipo (p. ej. Práctica 4h)
+    for sec in sections:
+        sid = sec.section_id
+        for ci, course in enumerate(sec.schedulable_courses):
+            for b in range(course.n_theory_blocks - 1):
+                t_b0 = sum((d * NUM_SLOTS + s) * theory_vars[(sid,ci,b,d,s)] for d in range(NUM_DAYS) for s in range(NUM_SLOTS))
+                t_b1 = sum((d * NUM_SLOTS + s) * theory_vars[(sid,ci,b+1,d,s)] for d in range(NUM_DAYS) for s in range(NUM_SLOTS))
+                model.Add(t_b0 < t_b1)
+            for b in range(course.n_practice_blocks - 1):
+                p_b0 = sum((d * NUM_SLOTS + s) * pract_vars[(sid,ci,b,d,s)] for d in range(NUM_DAYS) for s in range(NUM_SLOTS))
+                p_b1 = sum((d * NUM_SLOTS + s) * pract_vars[(sid,ci,b+1,d,s)] for d in range(NUM_DAYS) for s in range(NUM_SLOTS))
+                model.Add(p_b0 < p_b1)
 
     # ── Objetivo: compactar horario ───────────────────────────────────────────
     penalty = []

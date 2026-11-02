@@ -1,5 +1,12 @@
 const API_URL = '/api'; // Vite proxy handles the host
 
+function authHeaders(): Record<string, string> {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+}
+
 export const api = {
     // Auth
     register: async (userData: any) => {
@@ -29,8 +36,16 @@ export const api = {
         const data = await response.json();
         return data.map((t: any) => ({
             ...t,
-            maxHours: t.max_hours, // Map snake_case to camelCase
+            maxHours: t.required_hours || t.max_hours,
+            requiredHours: t.required_hours || t.max_hours,
+            orden: t.orden,
         }));
+    },
+
+    getOrderedTeachers: async () => {
+        const response = await fetch(`${API_URL}/teachers/ordered`);
+        if (!response.ok) throw new Error('Failed to fetch ordered teachers');
+        return response.json();
     },
 
     getTeacher: async (id: string) => {
@@ -39,7 +54,9 @@ export const api = {
         const t = await response.json();
         return {
             ...t,
-            maxHours: t.max_hours,
+            maxHours: t.required_hours || t.max_hours,
+            requiredHours: t.required_hours || t.max_hours,
+            orden: t.orden,
         };
     },
 
@@ -52,22 +69,23 @@ export const api = {
     saveTeacherAvailability: async (teacherId: string, availability: any[]) => {
         const response = await fetch(`${API_URL}/teachers/${teacherId}/availability`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ availability }),
         });
         if (!response.ok) throw new Error('Failed to save availability');
         return response.json();
     },
 
-
     createTeacher: async (teacher: any) => {
         const payload = {
             ...teacher,
             max_hours: teacher.maxHours,
+            required_hours: teacher.requiredHours || teacher.maxHours,
+            orden: teacher.orden || 999,
         };
         const response = await fetch(`${API_URL}/teachers`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to create teacher');
@@ -78,10 +96,12 @@ export const api = {
         const payload = {
             ...teacher,
             max_hours: teacher.maxHours,
+            required_hours: teacher.requiredHours || teacher.maxHours,
+            orden: teacher.orden || 999,
         };
         const response = await fetch(`${API_URL}/teachers/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to update teacher');
@@ -91,6 +111,7 @@ export const api = {
     deleteTeacher: async (id: string) => {
         const response = await fetch(`${API_URL}/teachers/${id}`, {
             method: 'DELETE',
+            headers: authHeaders(),
         });
         if (!response.ok) throw new Error('Failed to delete teacher');
         return response.json();
@@ -118,7 +139,7 @@ export const api = {
         };
         const response = await fetch(`${API_URL}/semesters`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to create semester');
@@ -134,17 +155,17 @@ export const api = {
         };
         const response = await fetch(`${API_URL}/semesters/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to update semester');
         return response.json();
     },
 
-
     activateSemester: async (id: string) => {
         const response = await fetch(`${API_URL}/semesters/${id}/activate`, {
             method: 'PUT',
+            headers: authHeaders(),
         });
         if (!response.ok) throw new Error('Failed to activate semester');
         return response.json();
@@ -153,6 +174,7 @@ export const api = {
     deleteSemester: async (id: string) => {
         const response = await fetch(`${API_URL}/semesters/${id}`, {
             method: 'DELETE',
+            headers: authHeaders(),
         });
         if (!response.ok) throw new Error('Failed to delete semester');
         return response.json();
@@ -166,6 +188,11 @@ export const api = {
         return data.map((c: any) => ({
             ...c,
             hoursPerWeek: c.hours_per_week,
+            hoursTheory: c.hours_theory,
+            hoursPractice: c.hours_practice,
+            hoursLab: c.hours_lab,
+            hasLab: Boolean(c.has_lab),
+            cycleNumber: c.cycle_number,
         }));
     },
 
@@ -176,7 +203,7 @@ export const api = {
         };
         const response = await fetch(`${API_URL}/courses`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to create course');
@@ -190,7 +217,7 @@ export const api = {
         };
         const response = await fetch(`${API_URL}/courses/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error('Failed to update course');
@@ -200,6 +227,7 @@ export const api = {
     deleteCourse: async (id: string) => {
         const response = await fetch(`${API_URL}/courses/${id}`, {
             method: 'DELETE',
+            headers: authHeaders(),
         });
         if (!response.ok) throw new Error('Failed to delete course');
         return response.json();
@@ -210,5 +238,133 @@ export const api = {
         const response = await fetch(`${API_URL}/classrooms`);
         if (!response.ok) throw new Error('Failed to fetch classrooms');
         return response.json();
-    }
+    },
+
+    // Assignments (Horarios reales)
+    getAssignments: async (params?: { semester_id?: string | number; teacher_id?: string | number; classroom_id?: string | number }) => {
+        const qs = new URLSearchParams();
+        if (params?.semester_id) qs.set('semester_id', String(params.semester_id));
+        if (params?.teacher_id) qs.set('teacher_id', String(params.teacher_id));
+        if (params?.classroom_id) qs.set('classroom_id', String(params.classroom_id));
+        const url = `${API_URL}/assignments${qs.toString() ? `?${qs.toString()}` : ''}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch assignments');
+        return response.json();
+    },
+
+    // Solver Health
+    getSolverHealth: async () => {
+        try {
+            const response = await fetch(`${API_URL}/solver/health`);
+            return response.json();
+        } catch {
+            return { solver_status: 'unavailable' };
+        }
+    },
+
+    // Adjudicación por turnos y categorías + Generación CP-SAT
+    getActiveAdjudicacion: async (semesterId?: number | string) => {
+        const qs = semesterId ? `?semester_id=${semesterId}` : '';
+        const response = await fetch(`${API_URL}/adjudicacion/activo${qs}`, { headers: authHeaders() });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    iniciarAdjudicacion: async (payload: {
+        semester_id: number;
+        period?: string;
+        cycles?: number[];
+        sections?: string[];
+        cycle_sections?: Record<string, string[]>;
+        repeat_cycles?: number[];
+        teacher_ids?: number[];
+    }) => {
+        const response = await fetch(`${API_URL}/adjudicacion/iniciar`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al iniciar adjudicación');
+        return data;
+    },
+
+    getTurnoActual: async (processId: number) => {
+        const response = await fetch(`${API_URL}/adjudicacion/${processId}/turno-actual`, { headers: authHeaders() });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al obtener turno actual');
+        return data;
+    },
+
+    seleccionarSesiones: async (processId: number, teacherId: number, sessions: { course_id: number; section: string; session_type: string }[]) => {
+        const response = await fetch(`${API_URL}/adjudicacion/${processId}/seleccionar`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ teacher_id: teacherId, sessions }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al seleccionar sesiones');
+        return data;
+    },
+
+    confirmarTurno: async (processId: number, teacherId: number) => {
+        const response = await fetch(`${API_URL}/adjudicacion/${processId}/confirmar`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ teacher_id: teacherId }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al confirmar turno');
+        return data;
+    },
+
+    saltarTurno: async (processId: number, teacherId: number) => {
+        const response = await fetch(`${API_URL}/adjudicacion/${processId}/saltar`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ teacher_id: teacherId }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al saltar turno');
+        return data;
+    },
+
+    getResumenAdjudicacion: async (processId: number) => {
+        const response = await fetch(`${API_URL}/adjudicacion/${processId}/resumen`, { headers: authHeaders() });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al obtener resumen');
+        return data;
+    },
+
+    generarHorario: async (processId: number, options?: { time_limit_seconds?: number; replace_existing?: boolean; allow_unassigned?: boolean; description?: string }) => {
+        const response = await fetch(`${API_URL}/adjudicacion/${processId}/generar`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(options || {}),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            const detailMsg = typeof data.detail === 'object' ? (data.detail.message || JSON.stringify(data.detail)) : (data.detail || '');
+            throw new Error([data.error, detailMsg].filter(Boolean).join(': '));
+        }
+        return data;
+    },
+
+    getResultadoHorario: async (processId: number) => {
+        const response = await fetch(`${API_URL}/adjudicacion/${processId}/resultado`, { headers: authHeaders() });
+        if (!response.ok) return null;
+        return response.json();
+    },
+
+    eliminarProcesoAdjudicacion: async (processId: number) => {
+        const response = await fetch(`${API_URL}/adjudicacion/${processId}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al eliminar proceso');
+        return data;
+    },
+
+    getExportExcelUrl: (processId: number) => `${API_URL}/adjudicacion/${processId}/exportar-excel`,
 };

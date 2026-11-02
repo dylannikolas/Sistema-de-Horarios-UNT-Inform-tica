@@ -15,6 +15,8 @@ Se verifica:
   - Excel exportado sin errores
 """
 import sys, os
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.path.insert(0, os.path.dirname(__file__))
 
 from models import (Teacher, Course, SectionData, MALLA_REAL,

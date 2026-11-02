@@ -4,31 +4,48 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 const router = express.Router();
 
-// GET all assignments (optionally filter by semester)
+const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+// GET all assignments (optionally filter by semester_id, teacher_id, classroom_id)
 router.get('/', async (req, res) => {
-    const { semester_id } = req.query;
+    const { semester_id, teacher_id, classroom_id } = req.query;
     try {
         let query = `
-      SELECT a.*, 
-             c.name as course_name, c.code as course_code, 
-             t.name as teacher_name, 
-             r.name as classroom_name 
+      SELECT a.*, a.day_of_week + 0 AS dow_idx,
+             c.name as course_name, c.code as course_code, c.cycle, c.cycle_number,
+             t.name as teacher_name,
+             r.name as classroom_name, r.type as classroom_type
       FROM assignments a
       JOIN courses c ON a.course_id = c.id
       JOIN teachers t ON a.teacher_id = t.id
       JOIN classrooms r ON a.classroom_id = r.id
+      WHERE 1=1
     `;
         const params: any[] = [];
 
         if (semester_id) {
-            query += ' WHERE a.semester_id = ?';
+            query += ' AND a.semester_id = ?';
             params.push(semester_id);
+        } else {
+            query += ' AND a.semester_id = (SELECT id FROM semesters WHERE is_active = 1 LIMIT 1)';
+        }
+        if (teacher_id) {
+            query += ' AND a.teacher_id = ?';
+            params.push(teacher_id);
+        }
+        if (classroom_id) {
+            query += ' AND a.classroom_id = ?';
+            params.push(classroom_id);
         }
 
         query += ' ORDER BY a.day_of_week, a.start_time';
 
         const [rows] = await db.query<RowDataPacket[]>(query, params);
-        res.json(rows);
+        const formatted = rows.map(r => ({
+            ...r,
+            day_of_week: DAY_NAMES[(Number(r.dow_idx) || 1) - 1] || r.day_of_week,
+        }));
+        res.json(formatted);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error fetching assignments' });

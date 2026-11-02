@@ -42,10 +42,23 @@ async function main() {
     await addColumn('assignments', 'section', 'VARCHAR(2) NULL');
     await addColumn('assignments', 'session_type', 'VARCHAR(15) NULL');
 
-    console.log('▶ Horas reglamentarias por categoría');
+    console.log('▶ Horas reglamentarias y orden de prelación por categoría');
     await pool.query(`UPDATE teachers SET required_hours = CASE category
         WHEN 'Principal' THEN 20 WHEN 'Asociado' THEN 18
-        WHEN 'Auxiliar' THEN 16 ELSE 12 END WHERE required_hours = 0`);
+        WHEN 'Auxiliar' THEN 16 ELSE 12 END,
+        max_hours = CASE category
+        WHEN 'Principal' THEN 20 WHEN 'Asociado' THEN 18
+        WHEN 'Auxiliar' THEN 16 ELSE 12 END`);
+
+    for (const cat of ['Principal', 'Asociado', 'Auxiliar', 'Contratado']) {
+        const [trows] = await pool.query<RowDataPacket[]>(
+            'SELECT id, orden FROM teachers WHERE category = ? ORDER BY orden ASC, id ASC', [cat]);
+        for (let i = 0; i < trows.length; i++) {
+            if (trows[i].orden === 999) {
+                await pool.query('UPDATE teachers SET orden = ? WHERE id = ?', [i + 1, trows[i].id]);
+            }
+        }
+    }
 
     console.log('▶ Ciclo romano → numérico');
     for (let i = 0; i < ROMAN.length; i++) {
@@ -75,11 +88,11 @@ async function main() {
     }
     console.log(`  cursos insertados: ${inserted} · actualizados: ${updated}`);
 
-    console.log('▶ Aulas EPI');
-    // type se inserta por índice del ENUM (1 = teórica, 2 = laboratorio) para no depender de la codificación del texto
+    console.log('▶ Aulas reales EPI (5 Teóricas: POOL-17/18, INFO-2/3/5 · 3 Laboratorios: LAB-A/B/C)');
+    // type se inserta por índice del ENUM (1 = Teoría, 2 = Laboratorio) para no depender de la codificación del texto
     const rooms: [string, number, number][] = [
         ['POOL-17', 1, 35], ['POOL-18', 1, 35],
-        ['INFO-2', 2, 25], ['INFO-3', 2, 25], ['INFO-5', 2, 25],
+        ['INFO-2', 1, 25], ['INFO-3', 1, 25], ['INFO-5', 1, 25],
         ['LAB-A', 2, 40], ['LAB-B', 2, 40], ['LAB-C', 2, 40],
     ];
     for (const [name, typeIdx, cap] of rooms) {
@@ -87,8 +100,19 @@ async function main() {
         if (!ex.length) {
             await pool.query('INSERT INTO classrooms (name, type, capacity) VALUES (?, ?, ?)', [name, typeIdx, cap]);
             console.log(`  + aula ${name}`);
+        } else {
+            await pool.query('UPDATE classrooms SET type = ?, capacity = ? WHERE id = ?', [typeIdx, cap, ex[0].id]);
         }
     }
+    const validRoomNames = rooms.map(r => r[0]);
+    const [firstEpiRoom] = await pool.query<RowDataPacket[]>('SELECT id FROM classrooms WHERE name = ?', ['POOL-17']);
+    if (firstEpiRoom.length) {
+        await pool.query(
+            'UPDATE assignments SET classroom_id = ? WHERE classroom_id IN (SELECT id FROM (SELECT id FROM classrooms WHERE name NOT IN (?)) AS tmp)',
+            [firstEpiRoom[0].id, validRoomNames]
+        );
+    }
+    await pool.query('DELETE FROM classrooms WHERE name NOT IN (?)', [validRoomNames]);
 
     console.log('▶ Tablas de adjudicación');
     await pool.query(`CREATE TABLE IF NOT EXISTS adjudicacion_process (

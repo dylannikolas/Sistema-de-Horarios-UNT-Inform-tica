@@ -15,7 +15,9 @@ export interface Teacher {
   code: string;
   avatar: string;
   maxHours: number;
-  role: 'DIRECTOR' | 'DOCENTE'; // Nuevo campo de rol
+  requiredHours?: number;
+  orden?: number;
+  role: 'DIRECTOR' | 'DOCENTE';
 }
 
 export interface Course {
@@ -23,8 +25,13 @@ export interface Course {
   code: string;
   name: string;
   cycle: string;
+  cycleNumber?: number;
   credits: number;
   hoursPerWeek: number;
+  hoursTheory?: number;
+  hoursPractice?: number;
+  hoursLab?: number;
+  hasLab?: boolean;
 }
 
 export interface AvailabilitySlot {

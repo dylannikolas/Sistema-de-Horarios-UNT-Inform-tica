@@ -10,8 +10,9 @@ const AdminSidebar: React.FC = () => {
     { path: '/admin/semestres', icon: 'calendar_month', label: 'Semestres' },
     { path: '/admin/docentes', icon: 'group', label: 'Docentes' },
     { path: '/admin/cursos', icon: 'menu_book', label: 'Cursos' },
+    { path: '/admin/adjudicacion', icon: 'bolt', label: 'Adjudicación & Solver' },
     { path: '/horario/docente', icon: 'schedule', label: 'Horarios Docente' },
-    { path: '/horario/aula', icon: 'meeting_room', label: 'Horarios Aula' },
+    { path: '/horario/aula', icon: 'meeting_room', label: 'Horarios Aula EPI' },
   ];
 
   return (

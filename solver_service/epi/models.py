@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Dict
 from enum import Enum
 
-DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"]
 TIME_SLOTS = [
     "07:00-09:00", "09:00-11:00", "11:00-13:00",
     "13:00-15:00", "15:00-17:00", "17:00-19:00", "19:00-21:00",

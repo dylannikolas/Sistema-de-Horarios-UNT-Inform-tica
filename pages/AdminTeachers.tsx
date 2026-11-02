@@ -38,13 +38,20 @@ const AdminTeachers: React.FC = () => {
     const formData = new FormData(e.currentTarget);
     const { api } = await import('../services/api');
 
+    const category = formData.get('category') as any;
+    const categoryHours: Record<string, number> = { Principal: 20, Asociado: 18, Auxiliar: 16, Contratado: 12 };
+    const parsedMax = parseInt(formData.get('maxHours') as string) || categoryHours[category] || 12;
+    const parsedOrden = parseInt(formData.get('orden') as string) || editingTeacher?.orden || 999;
+
     const teacherData = {
       name: formData.get('name') as string,
       email: formData.get('email') as string,
-      category: formData.get('category') as any,
+      category,
       code: formData.get('code') as string,
       avatar: editingTeacher?.avatar || `https://picsum.photos/seed/${Math.random()}/200`,
-      maxHours: parseInt(formData.get('maxHours') as string),
+      maxHours: parsedMax,
+      requiredHours: parsedMax,
+      orden: parsedOrden,
       role: editingTeacher?.role || 'DOCENTE',
     };
 
@@ -87,8 +94,9 @@ const AdminTeachers: React.FC = () => {
                   <tr>
                     <th className="px-6 py-4">Docente</th>
                     <th className="px-6 py-4">Código</th>
-                    <th className="px-6 py-4 text-center">Horas Máx.</th>
+                    <th className="px-6 py-4 text-center">Horas Regl.</th>
                     <th className="px-6 py-4">Categoría</th>
+                    <th className="px-6 py-4 text-center">Prelación</th>
                     <th className="px-6 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
@@ -105,11 +113,14 @@ const AdminTeachers: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 font-mono text-[#616f89] dark:text-gray-400">{teacher.code}</td>
-                      <td className="px-6 py-4 text-center font-bold text-primary">{teacher.maxHours}h</td>
+                      <td className="px-6 py-4 text-center font-bold text-primary">{teacher.requiredHours || teacher.maxHours}h</td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                           {teacher.category}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 text-center font-mono text-xs font-bold text-gray-600 dark:text-gray-300">
+                        #{teacher.orden ?? '-'}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-3">
@@ -203,14 +214,18 @@ const AdminTeachers: React.FC = () => {
                   <label className="text-xs font-bold text-gray-500 uppercase">Correo Institucional</label>
                   <input required name="email" type="email" defaultValue={editingTeacher?.email} className="h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-primary outline-none text-sm" placeholder="usuario@unitru.edu.pe" />
                 </div>
-                <div className="flex flex-col gap-1 col-span-2">
+                <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-gray-500 uppercase">Categoría</label>
-                  <select name="category" defaultValue={editingTeacher?.category} className="h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-primary outline-none text-sm appearance-none">
-                    <option value="Principal">Principal</option>
-                    <option value="Asociado">Asociado</option>
-                    <option value="Auxiliar">Auxiliar</option>
-                    <option value="Contratado">Contratado</option>
+                  <select name="category" defaultValue={editingTeacher?.category || 'Principal'} className="h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-primary outline-none text-sm appearance-none">
+                    <option value="Principal">Principal (20h)</option>
+                    <option value="Asociado">Asociado (18h)</option>
+                    <option value="Auxiliar">Auxiliar (16h)</option>
+                    <option value="Contratado">Contratado (12h)</option>
                   </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Orden Prelación</label>
+                  <input required name="orden" type="number" min={1} defaultValue={editingTeacher?.orden || 1} className="h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-primary outline-none text-sm" placeholder="1" />
                 </div>
               </div>
               <div className="flex gap-4 mt-6">

@@ -45,6 +45,7 @@ const TeacherSidebar: React.FC = () => {
   const navItems = [
     { path: '/docente/inicio', icon: 'dashboard', label: 'Inicio' },
     { path: '/docente/disponibilidad', icon: 'edit_calendar', label: 'Mi Disponibilidad' },
+    { path: '/docente/adjudicacion', icon: 'how_to_reg', label: 'Adjudicación de Carga' },
     { path: '/docente/mi-horario', icon: 'event_note', label: 'Mi Horario Final' },
   ];
 

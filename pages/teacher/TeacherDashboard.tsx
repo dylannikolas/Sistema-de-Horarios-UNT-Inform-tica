@@ -98,22 +98,22 @@ const TeacherDashboard: React.FC = () => {
               <h3 className="text-lg font-black mb-1">Horario Lectivo</h3>
               <p className="text-sm text-gray-400 font-medium">{getSemesterDisplay()}</p>
             </div>
-            <Link to="/horario/docente" className="mt-2 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 text-center rounded-xl font-bold hover:bg-gray-200 transition-all">
+            <Link to="/docente/mi-horario" className="mt-2 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 text-center rounded-xl font-bold hover:bg-gray-200 transition-all">
               Ver Horario
             </Link>
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-4">
             <div className="size-14 bg-purple-50 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center text-purple-500">
-              <span className="material-symbols-outlined text-3xl">notifications</span>
+              <span className="material-symbols-outlined text-3xl">how_to_reg</span>
             </div>
             <div>
-              <h3 className="text-lg font-black mb-1">Notificaciones</h3>
-              <p className="text-sm text-gray-400">Tiene 0 avisos nuevos</p>
+              <h3 className="text-lg font-black mb-1">Adjudicación de Carga</h3>
+              <p className="text-sm text-gray-400">Selección por categoría ({teacherData?.category || 'Docente'})</p>
             </div>
-            <button className="mt-2 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 text-center rounded-xl font-bold hover:bg-gray-200 transition-all">
-              Leer Avisos
-            </button>
+            <Link to="/docente/adjudicacion" className="mt-2 py-3 bg-purple-600 text-white text-center rounded-xl font-bold hover:bg-purple-700 transition-all">
+              Ir a Mi Turno
+            </Link>
           </div>
         </div>
 

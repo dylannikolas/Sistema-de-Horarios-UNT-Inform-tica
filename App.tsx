@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import AdminSemesters from './pages/AdminSemesters';
 import AdminTeachers from './pages/AdminTeachers';
 import AdminCourses from './pages/AdminCourses';
+import AdminAdjudicacion from './pages/AdminAdjudicacion';
 import TeacherWorkload from './pages/TeacherWorkload';
 import ScheduleTeacher from './pages/ScheduleTeacher';
 import ScheduleRoom from './pages/ScheduleRoom';
@@ -12,6 +13,7 @@ import ScheduleRoom from './pages/ScheduleRoom';
 // Nuevas páginas del docente
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import TeacherAvailabilityPage from './pages/teacher/TeacherAvailability';
+import TeacherAdjudicacion from './pages/teacher/TeacherAdjudicacion';
 
 // Layouts & Security
 import { AdminLayout } from './components/AdminLayout';
@@ -45,6 +47,7 @@ const App: React.FC = () => {
           <Route path="/admin/semestres" element={<AdminSemesters />} />
           <Route path="/admin/docentes" element={<AdminTeachers />} />
           <Route path="/admin/cursos" element={<AdminCourses />} />
+          <Route path="/admin/adjudicacion" element={<AdminAdjudicacion />} />
           <Route path="/docente/carga/:teacherId" element={<TeacherWorkload />} />
 
           {/* Shared Pages (Require Wrapper) */}
@@ -59,6 +62,7 @@ const App: React.FC = () => {
           {/* Standalone Pages (contain their own <TeacherLayout>) */}
           <Route path="/docente/inicio" element={<TeacherDashboard />} />
           <Route path="/docente/disponibilidad" element={<TeacherAvailabilityPage />} />
+          <Route path="/docente/adjudicacion" element={<TeacherAdjudicacion />} />
 
           {/* Shared Pages (Require Wrapper) */}
           <Route element={<TeacherLayoutWrapper />}>
