@@ -10,6 +10,7 @@ import authRoutes from './routes/auth';
 import classroomRoutes from './routes/classrooms';
 import assignmentsRouter from './routes/assignments'; // Added this import
 import adjudicacionRoutes from './routes/adjudicacion'; // Fusión EPI Scheduler
+import { runMigration } from './migrate_fusion';
 
 dotenv.config();
 
@@ -56,6 +57,13 @@ app.get('/api/solver/health', async (req: Request, res: Response) => {
     }
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
     console.log(`Server running at http://localhost:${port}`);
+    try {
+        await runMigration(false);
+        console.log('✅ Base de datos EPI-UNT verificada y lista (usuarios admin / director activos).');
+    } catch (err: any) {
+        console.error('⚠️  No se pudo inicializar automáticamente la BD MySQL:', err?.message || err);
+        console.error('   Verifique DB_USER y DB_PASSWORD en server/.env');
+    }
 });

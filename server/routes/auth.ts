@@ -78,23 +78,25 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     try {
-        // Buscar usuario
+        const cleanUser = String(username).trim();
+        const shortUser = cleanUser.includes('@') ? cleanUser.split('@')[0] : cleanUser;
+
+        // Buscar usuario por username exacto o parte local del correo
         const [rows] = await pool.query<RowDataPacket[]>(
-            'SELECT * FROM users WHERE username = ?',
-            [username]
+            'SELECT * FROM users WHERE username = ? OR username = ? LIMIT 1',
+            [cleanUser, shortUser]
         );
 
         if (rows.length === 0) {
-            res.status(401).json({ error: 'Invalid credentials' });
+            res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
             return;
         }
 
         const user = rows[0];
 
-        // Verificar contraseña (TODO: Usar bcrypt en producción)
-        // Por ahora comparamos texto plano para compatibilidad con datos de prueba
+        // Verificar contraseña (compatible con datos de prueba)
         if (user.password !== password) {
-            res.status(401).json({ error: 'Invalid credentials' });
+            res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
             return;
         }
 
@@ -116,9 +118,21 @@ router.post('/login', async (req: Request, res: Response) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        if (error?.code === 'ER_ACCESS_DENIED_ERROR') {
+            res.status(500).json({
+                error: `Acceso denegado a MySQL para '${process.env.DB_USER || 'root'}'. Configure su contraseña de MySQL en server/.env (DB_PASSWORD=...) y reinicie el backend.`
+            });
+            return;
+        }
+        if (error?.code === 'ECONNREFUSED') {
+            res.status(500).json({
+                error: 'No se pudo conectar al servidor MySQL (puerto 3306). Verifique que el servicio MySQL esté iniciado.'
+            });
+            return;
+        }
+        res.status(500).json({ error: error?.sqlMessage || error?.message || 'Internal Server Error' });
     }
 });
 

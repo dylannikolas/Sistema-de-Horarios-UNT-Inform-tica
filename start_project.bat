@@ -18,6 +18,23 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
+REM Configurar server\.env si no existe
+if not exist "server\.env" (
+    echo [CONFIGURACION INICIAL DE MYSQL]
+    set /p MYSQL_PASS="Ingresa la contrasena de tu usuario root de MySQL (deja vacio si no tiene): "
+    (
+        echo DB_HOST=localhost
+        echo DB_USER=root
+        echo DB_PASSWORD=%MYSQL_PASS%
+        echo DB_NAME=sistema_horarios
+        echo PORT=3001
+        echo JWT_SECRET=secret-key-change-me
+        echo SOLVER_URL=http://localhost:5000
+    ) > "server\.env"
+    echo [OK] Archivo server\.env creado.
+    echo.
+)
+
 REM Verificar que las dependencias esten instaladas
 if not exist "node_modules" (
     echo [AVISO] Instalando dependencias del frontend...
@@ -63,12 +80,11 @@ echo Backend API:   http://localhost:3001
 echo Frontend Web:  http://localhost:5173
 echo.
 echo Credenciales de Director:
-echo   Usuario:  admin
-echo   Password: admin123
+echo   Usuario:  director   (Password: director123)
+echo   Usuario:  admin      (Password: admin123)
 echo.
 echo Credenciales de Docente (ejemplo):
-echo   Usuario:  jgutierrez
-echo   Password: DOC-01
+echo   Usuario:  jgutierrez (Password: DOC-01)
 echo.
 echo ========================================================
 echo.
