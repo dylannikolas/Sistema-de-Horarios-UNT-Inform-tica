@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 title Sistema de Horarios UNT (SHARPEI + EPI Solver) - Iniciando...
 color 0A
 
@@ -25,7 +26,7 @@ if not exist "server\.env" (
     (
         echo DB_HOST=localhost
         echo DB_USER=root
-        echo DB_PASSWORD=%MYSQL_PASS%
+        echo DB_PASSWORD=!MYSQL_PASS!
         echo DB_NAME=sistema_horarios
         echo PORT=3001
         echo JWT_SECRET=secret-key-change-me
@@ -56,19 +57,20 @@ timeout /t 2 /nobreak >nul
 
 echo.
 echo [2/4] Iniciando servidor backend Node/Express (Puerto 3001)...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3001 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>nul
 start "Backend - Puerto 3001" cmd /k "cd server && npm run dev"
 
 timeout /t 3 /nobreak >nul
 
 echo.
-echo [3/4] Iniciando frontend React/Vite (Puerto 5173)...
-start "Frontend - Puerto 5173" cmd /k "npm run dev"
+echo [3/4] Iniciando frontend React/Vite (Puerto 3000)...
+start "Frontend - Puerto 3000" cmd /k "npm run dev"
 
 timeout /t 4 /nobreak >nul
 
 echo.
 echo [4/4] Abriendo navegador...
-start http://localhost:5173
+start http://localhost:3000
 
 echo.
 echo ========================================================
@@ -77,7 +79,7 @@ echo ========================================================
 echo.
 echo Solver CP-SAT: http://localhost:5000/health
 echo Backend API:   http://localhost:3001
-echo Frontend Web:  http://localhost:5173
+echo Frontend Web:  http://localhost:3000
 echo.
 echo Credenciales de Director:
 echo   Usuario:  director   (Password: director123)

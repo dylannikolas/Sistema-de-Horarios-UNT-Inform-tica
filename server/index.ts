@@ -12,7 +12,7 @@ import assignmentsRouter from './routes/assignments'; // Added this import
 import adjudicacionRoutes from './routes/adjudicacion'; // Fusión EPI Scheduler
 import { runMigration } from './migrate_fusion';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const app = express();
 const port = process.env.PORT || 3001;

@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Cargar variables desde server/.env o desde el .env en la raíz del proyecto
-dotenv.config({ path: path.join(__dirname, '.env') });
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env'), override: true });
+dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
