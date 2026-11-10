@@ -143,3 +143,4 @@ CREATE TABLE IF NOT EXISTS solver_results (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (process_id) REFERENCES adjudicacion_process(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

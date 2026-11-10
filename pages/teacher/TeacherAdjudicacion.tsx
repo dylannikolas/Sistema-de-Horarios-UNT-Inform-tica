@@ -360,3 +360,4 @@ const TeacherAdjudicacion: React.FC = () => {
 };
 
 export default TeacherAdjudicacion;
+

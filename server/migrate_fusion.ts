@@ -43,12 +43,13 @@ async function main() {
     await addColumn('assignments', 'session_type', 'VARCHAR(15) NULL');
 
     console.log('▶ Horas reglamentarias y orden de prelación por categoría');
-    await pool.query(`UPDATE teachers SET required_hours = CASE category
-        WHEN 'Principal' THEN 20 WHEN 'Asociado' THEN 18
-        WHEN 'Auxiliar' THEN 16 ELSE 12 END,
-        max_hours = CASE category
-        WHEN 'Principal' THEN 20 WHEN 'Asociado' THEN 18
-        WHEN 'Auxiliar' THEN 16 ELSE 12 END`);
+    await pool.query(`UPDATE teachers SET required_hours = CASE
+        WHEN max_hours > 0 AND (category = 'Principal' OR max_hours <> 20) THEN max_hours
+        WHEN category = 'Principal' THEN 20
+        WHEN category = 'Asociado' THEN 18
+        WHEN category = 'Auxiliar' THEN 16
+        ELSE 12 END
+        WHERE required_hours = 0`);
 
     for (const cat of ['Principal', 'Asociado', 'Auxiliar', 'Contratado']) {
         const [trows] = await pool.query<RowDataPacket[]>(
@@ -101,18 +102,9 @@ async function main() {
             await pool.query('INSERT INTO classrooms (name, type, capacity) VALUES (?, ?, ?)', [name, typeIdx, cap]);
             console.log(`  + aula ${name}`);
         } else {
-            await pool.query('UPDATE classrooms SET type = ?, capacity = ? WHERE id = ?', [typeIdx, cap, ex[0].id]);
+            await pool.query('UPDATE classrooms SET type = ? WHERE id = ?', [typeIdx, ex[0].id]);
         }
     }
-    const validRoomNames = rooms.map(r => r[0]);
-    const [firstEpiRoom] = await pool.query<RowDataPacket[]>('SELECT id FROM classrooms WHERE name = ?', ['POOL-17']);
-    if (firstEpiRoom.length) {
-        await pool.query(
-            'UPDATE assignments SET classroom_id = ? WHERE classroom_id IN (SELECT id FROM (SELECT id FROM classrooms WHERE name NOT IN (?)) AS tmp)',
-            [firstEpiRoom[0].id, validRoomNames]
-        );
-    }
-    await pool.query('DELETE FROM classrooms WHERE name NOT IN (?)', [validRoomNames]);
 
     console.log('▶ Tablas de adjudicación');
     await pool.query(`CREATE TABLE IF NOT EXISTS adjudicacion_process (

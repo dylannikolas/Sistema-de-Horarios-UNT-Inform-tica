@@ -37,24 +37,59 @@ type SType = typeof TYPES[number];
 const evenUp = (h: number) => (h > 0 ? Math.ceil(h / 2) * 2 : 0);
 const requiredOf = (t: any): number => (t.required_hours > 0 ? t.required_hours : (CAT_HOURS[t.category] ?? 12));
 
-/** Extrae usuario opcional del JWT si el cliente envía Authorization: Bearer <token> */
-function getAuthUser(req: Request): { id?: number; role?: string; teacher_id?: number } | null {
+interface AuthPayload {
+    id?: number;
+    username?: string;
+    role?: string;
+    teacher_id?: number | null;
+}
+
+/** Verifica obligatoriamente el token JWT (401 si falta o es falso/expirado). */
+function requireAuth(req: Request, res: Response): AuthPayload | null {
     const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Bearer ')) return null;
+    if (!auth || !auth.startsWith('Bearer ')) {
+        res.status(401).json({ error: 'Token de autenticación requerido (Authorization: Bearer <token>)' });
+        return null;
+    }
+    const rawToken = auth.slice(7).trim();
+    if (!rawToken) {
+        res.status(401).json({ error: 'Token de autenticación vacío' });
+        return null;
+    }
     try {
-        return jwt.verify(auth.slice(7), SECRET_KEY) as any;
+        const decoded = jwt.verify(rawToken, SECRET_KEY) as AuthPayload;
+        if (!decoded || typeof decoded !== 'object' || !decoded.role) {
+            res.status(401).json({ error: 'Token JWT sin rol válido' });
+            return null;
+        }
+        return decoded;
     } catch {
+        res.status(401).json({ error: 'Token JWT inválido o expirado' });
         return null;
     }
 }
 
-function requireDirectorIfAuth(req: Request, res: Response): boolean {
-    const u = getAuthUser(req);
-    if (u && u.role && u.role !== 'DIRECTOR' && u.role !== 'ADMIN') {
+/** Exige token JWT válido con rol DIRECTOR o ADMIN (401 si no autenticado, 403 si rol insuficiente). */
+function requireDirector(req: Request, res: Response): boolean {
+    const u = requireAuth(req, res);
+    if (!u) return false;
+    if (u.role !== 'DIRECTOR' && u.role !== 'ADMIN') {
         res.status(403).json({ error: 'Acción reservada para el Director de Escuela' });
         return false;
     }
     return true;
+}
+
+/** Exige token JWT válido: permite DIRECTOR/ADMIN o al propio DOCENTE titular del turno (teacher_id). */
+function requireTeacherOrDirector(req: Request, res: Response, targetTeacherId: number): boolean {
+    const u = requireAuth(req, res);
+    if (!u) return false;
+    if (u.role === 'DIRECTOR' || u.role === 'ADMIN') return true;
+    if (u.role === 'DOCENTE' && u.teacher_id != null && Number(u.teacher_id) === Number(targetTeacherId)) {
+        return true;
+    }
+    res.status(403).json({ error: 'No tiene permisos para operar sobre el turno de otro docente' });
+    return false;
 }
 
 /** Horas que ocupa cada tipo de sesión de un curso (bloques de 2h; laboratorio = 4h consecutivas). */
@@ -207,7 +242,7 @@ router.get('/activo', async (req: Request, res: Response) => {
 
 // ── POST /iniciar ────────────────────────────────────────────────────────────
 router.post('/iniciar', async (req: Request, res: Response) => {
-    if (!requireDirectorIfAuth(req, res)) return;
+    if (!requireDirector(req, res)) return;
     const { semester_id, cycles, sections, cycle_sections, repeat_cycles, teacher_ids, period } = req.body;
 
     // Construir mapa cycle_sections si se envió o combinar cycles + repeat_cycles
@@ -328,11 +363,7 @@ router.post('/:id/seleccionar', async (req: Request, res: Response) => {
     const pid = Number(req.params.id);
     const { teacher_id, sessions } = req.body;
     if (!teacher_id || !Array.isArray(sessions)) { res.status(400).json({ error: 'teacher_id y sessions son obligatorios' }); return; }
-
-    const authUser = getAuthUser(req);
-    if (authUser && authUser.role === 'DOCENTE' && authUser.teacher_id && Number(authUser.teacher_id) !== Number(teacher_id)) {
-        res.status(403).json({ error: 'No puede modificar la selección de otro docente' }); return;
-    }
+    if (!requireTeacherOrDirector(req, res, Number(teacher_id))) return;
 
     const conn = await pool.getConnection();
     try {
@@ -379,10 +410,8 @@ router.post('/:id/seleccionar', async (req: Request, res: Response) => {
 // ── POST /:id/confirmar ──────────────────────────────────────────────────────
 router.post('/:id/confirmar', async (req: Request, res: Response) => {
     const pid = Number(req.params.id);
-    const authUser = getAuthUser(req);
-    if (authUser && authUser.role === 'DOCENTE' && authUser.teacher_id && Number(authUser.teacher_id) !== Number(req.body.teacher_id)) {
-        res.status(403).json({ error: 'No puede confirmar el turno de otro docente' }); return;
-    }
+    if (!req.body.teacher_id) { res.status(400).json({ error: 'teacher_id es obligatorio' }); return; }
+    if (!requireTeacherOrDirector(req, res, Number(req.body.teacher_id))) return;
     try {
         const turn = await currentTurn(pid);
         if (!turn || turn.teacher_id !== Number(req.body.teacher_id)) { res.status(409).json({ error: 'No es el turno de este docente' }); return; }
@@ -403,7 +432,7 @@ router.post('/:id/confirmar', async (req: Request, res: Response) => {
 
 // ── POST /:id/saltar ─────────────────────────────────────────────────────────
 router.post('/:id/saltar', async (req: Request, res: Response) => {
-    if (!requireDirectorIfAuth(req, res)) return;
+    if (!requireDirector(req, res)) return;
     const pid = Number(req.params.id);
     try {
         const turn = await currentTurn(pid);
@@ -481,7 +510,7 @@ async function placeRooms(semesterId: number, sessions: any[], replaceExisting: 
 
 // ── POST /:id/generar ────────────────────────────────────────────────────────
 router.post('/:id/generar', async (req: Request, res: Response) => {
-    if (!requireDirectorIfAuth(req, res)) return;
+    if (!requireDirector(req, res)) return;
     const pid = Number(req.params.id);
     const { time_limit_seconds = 120, replace_existing = false, allow_unassigned = false, description = 'Horario SHARPEI + EPI Solver' } = req.body || {};
     try {
@@ -621,7 +650,7 @@ router.get('/:id/exportar-excel', async (req: Request, res: Response) => {
 
 // ── DELETE /:id (Reiniciar / eliminar proceso) ───────────────────────────────
 router.delete('/:id', async (req: Request, res: Response) => {
-    if (!requireDirectorIfAuth(req, res)) return;
+    if (!requireDirector(req, res)) return;
     try {
         const pid = Number(req.params.id);
         await pool.query('DELETE FROM adjudicacion_process WHERE id = ?', [pid]);

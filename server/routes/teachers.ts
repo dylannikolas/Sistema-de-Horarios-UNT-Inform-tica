@@ -93,11 +93,11 @@ router.post('/:id/availability', async (req: Request, res: Response) => {
 // CREATE Teacher
 router.post('/', async (req: Request, res: Response) => {
     const { name, email, category, code, avatar, max_hours, role, required_hours, orden } = req.body;
-    const reqHours = hoursFor(category, required_hours);
+    const reqHours = hoursFor(category, required_hours ?? max_hours);
     try {
         const [result] = await pool.query<ResultSetHeader>(
             'INSERT INTO teachers (name, email, category, code, avatar, max_hours, role, required_hours, orden) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [name, email, category, code, avatar, max_hours || 20, role || 'DOCENTE', reqHours, orden || 999]
+            [name, email, category, code, avatar, max_hours || reqHours, role || 'DOCENTE', reqHours, orden || 999]
         );
         res.json({ id: result.insertId, ...req.body, required_hours: reqHours, orden: orden || 999 });
     } catch (error: any) {
@@ -113,10 +113,11 @@ router.post('/', async (req: Request, res: Response) => {
 // UPDATE Teacher
 router.put('/:id', async (req: Request, res: Response) => {
     const { name, email, category, code, avatar, max_hours, role, required_hours, orden } = req.body;
+    const reqHours = hoursFor(category, required_hours ?? max_hours);
     try {
         await pool.query(
             'UPDATE teachers SET name = ?, email = ?, category = ?, code = ?, avatar = ?, max_hours = ?, role = ?, required_hours = ?, orden = ? WHERE id = ?',
-            [name, email, category, code, avatar, max_hours, role, hoursFor(category, required_hours), orden || 999, req.params.id]
+            [name, email, category, code, avatar, max_hours || reqHours, role || 'DOCENTE', reqHours, orden || 999, req.params.id]
         );
         res.json({ message: 'Teacher updated successfully' });
     } catch (error) {
