@@ -26,6 +26,7 @@ import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import pool from '../db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { loadCarga2026_2 } from '../carga_2026_2';
 
 const router = Router();
 const SOLVER_URL = process.env.SOLVER_URL || 'http://localhost:5000';
@@ -127,9 +128,34 @@ async function poolCourses(cfg: any): Promise<RowDataPacket[]> {
 
 /** Todas las sesiones del pool con su estado (libre / reservada / confirmada). */
 async function poolSessions(pid: number, cfg: any) {
+    if (cfg && cfg.custom_pool) {
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `SELECT s.course_id, c.code, c.name AS course_name, c.cycle_number AS cycle,
+                    s.section, s.session_type, s.hours, s.teacher_id, s.confirmed, t.name AS teacher_name
+             FROM adjudicacion_sessions s
+             JOIN courses c ON c.id = s.course_id
+             LEFT JOIN teachers t ON t.id = s.teacher_id
+             WHERE s.process_id = ?
+             ORDER BY c.cycle_number, c.code, s.section, FIELD(s.session_type, 'Teoria', 'Practica', 'Laboratorio')`,
+            [pid]
+        );
+        return rows.map(r => ({
+            course_id: r.course_id,
+            code: r.code,
+            course_name: r.course_name,
+            cycle: Number(r.cycle),
+            section: r.section,
+            session_type: r.session_type,
+            hours: Number(r.hours),
+            teacher_id: r.teacher_id,
+            teacher_name: r.teacher_name,
+            confirmed: !!r.confirmed,
+            label: `${r.cycle}°${r.section} | ${r.course_name} | ${r.session_type} (${r.hours}h)`,
+        }));
+    }
     const courses = await poolCourses(cfg);
     const [taken] = await pool.query<RowDataPacket[]>(
-        `SELECT s.course_id, s.section, s.session_type, s.teacher_id, s.confirmed, t.name AS teacher_name
+        `SELECT s.course_id, s.section, s.session_type, s.hours, s.teacher_id, s.confirmed, t.name AS teacher_name
          FROM adjudicacion_sessions s
          LEFT JOIN teachers t ON t.id = s.teacher_id
          WHERE s.process_id = ?`, [pid]);
@@ -145,11 +171,11 @@ async function poolSessions(pid: number, cfg: any) {
                 const t = takenMap.get(`${c.id}|${section}|${type}`);
                 out.push({
                     course_id: c.id, code: c.code, course_name: c.name, cycle: c.cycle_number, section,
-                    session_type: type, hours,
+                    session_type: type, hours: t && t.hours ? Number(t.hours) : hours,
                     teacher_id: t ? t.teacher_id : null,
                     teacher_name: t ? t.teacher_name : null,
                     confirmed: t ? !!t.confirmed : false,
-                    label: `${c.cycle_number}°${section} | ${c.name} | ${type} (${hours}h)`,
+                    label: `${c.cycle_number}°${section} | ${c.name} | ${type} (${t && t.hours ? t.hours : hours}h)`,
                 });
             }
         }
@@ -237,6 +263,23 @@ router.get('/activo', async (req: Request, res: Response) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Error al consultar proceso activo' });
+    }
+});
+
+// ── POST /cargar-2026-2 (Carga horaria oficial 2026-2 desde CSV/MD) ──────────
+router.post('/cargar-2026-2', async (req: Request, res: Response) => {
+    if (!requireDirector(req, res)) return;
+    try {
+        const semesterId = req.body?.semester_id ? Number(req.body.semester_id) : undefined;
+        const result = await loadCarga2026_2(semesterId);
+        res.json({
+            success: true,
+            message: `Carga oficial 2026-2 registrada (${result.sessions_count} sesiones, ${result.total_hours}h en ${result.teachers_count} docentes)`,
+            ...result,
+        });
+    } catch (e: any) {
+        console.error('Error al cargar carga 2026-2:', e);
+        res.status(500).json({ error: 'Error al cargar la carga horaria 2026-2', detail: String(e?.message || e) });
     }
 });
 
@@ -545,20 +588,32 @@ router.post('/:id/generar', async (req: Request, res: Response) => {
         const cById = new Map<number, any>(courseRows.map(c => [c.id, c]));
         for (const s of confirmed) {
             const key = `${s.course_id}|${s.section}`;
-            const c = cById.get(s.course_id);
+            const c = cById.get(s.course_id) || {
+                id: s.course_id,
+                name: s.course_name,
+                cycle_number: s.cycle,
+                hours_theory: 0,
+                hours_practice: 0,
+                hours_lab: 0,
+            };
             if (!courseMap.has(key)) courseMap.set(key, { id: c.id, name: c.name, cycle_number: c.cycle_number, section: s.section,
                 hours_theory: 0, hours_practice: 0, hours_lab: 0, has_lab: false, course_tipo: 'ES',
                 theory_teacher_id: null, practice_teacher_id: null, lab_teacher_id: null });
             const e = courseMap.get(key);
-            if (s.session_type === 'Teoria') { e.hours_theory = c.hours_theory; e.theory_teacher_id = s.teacher_id; }
-            if (s.session_type === 'Practica') { e.hours_practice = c.hours_practice; e.practice_teacher_id = s.teacher_id; }
-            if (s.session_type === 'Laboratorio') { e.hours_lab = c.hours_lab; e.has_lab = true; e.lab_teacher_id = s.teacher_id; }
+            if (s.session_type === 'Teoria') { e.hours_theory = proc.config.custom_pool ? s.hours : (c.hours_theory || s.hours); e.theory_teacher_id = s.teacher_id; }
+            if (s.session_type === 'Practica') { e.hours_practice = proc.config.custom_pool ? s.hours : (c.hours_practice || s.hours); e.practice_teacher_id = s.teacher_id; }
+            if (s.session_type === 'Laboratorio') { e.hours_lab = proc.config.custom_pool ? s.hours : (c.hours_lab || s.hours); e.has_lab = true; e.lab_teacher_id = s.teacher_id; }
         }
         const tids = [...new Set(confirmed.map(s => s.teacher_id))];
+        const confirmedHoursByTeacher = new Map<number, number>();
+        for (const s of confirmed) {
+            confirmedHoursByTeacher.set(s.teacher_id, (confirmedHoursByTeacher.get(s.teacher_id) || 0) + Number(s.hours));
+        }
         const [trows] = await pool.query<RowDataPacket[]>('SELECT id, name, category, orden, required_hours FROM teachers WHERE id IN (?)', [tids]);
         const [avail] = await pool.query<RowDataPacket[]>('SELECT teacher_id, day, hour, is_optional FROM teacher_availability WHERE teacher_id IN (?)', [tids]);
         const teachers = trows.map(t => ({
-            id: t.id, name: t.name, category: t.category, orden: t.orden, required_hours: requiredOf(t),
+            id: t.id, name: t.name, category: t.category, orden: t.orden,
+            required_hours: proc.config.custom_pool ? (confirmedHoursByTeacher.get(t.id) || requiredOf(t)) : requiredOf(t),
             availability: avail.filter(a => a.teacher_id === t.id).map(a => ({ day: a.day, hour: a.hour, is_optional: !!a.is_optional })),
         }));
 

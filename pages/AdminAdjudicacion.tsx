@@ -182,6 +182,23 @@ const AdminAdjudicacion: React.FC = () => {
     }
   };
 
+  const handleLoadCarga2026_2 = async () => {
+    setIsBusy(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const res = await api.cargarCarga2026_2(selectedSemesterId);
+      setSuccessMsg(res.message);
+      const tList = await api.getTeachers();
+      setTeachers(tList.filter((t: Teacher) => t.role !== 'DIRECTOR'));
+      await refreshActiveProcess(selectedSemesterId);
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Error al cargar la carga oficial 2026-2');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   const handleStartProcess = async () => {
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -341,7 +358,16 @@ const AdminAdjudicacion: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={handleLoadCarga2026_2}
+              className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-colors disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-base">upload_file</span>
+              Cargar Carga Oficial 2026-2 (CSV/MD)
+            </button>
             <label className="text-xs font-bold text-gray-500 uppercase">Semestre:</label>
             <select
               value={selectedSemesterId}

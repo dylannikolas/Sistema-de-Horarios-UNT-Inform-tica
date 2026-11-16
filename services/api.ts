@@ -270,6 +270,17 @@ export const api = {
         return response.json();
     },
 
+    cargarCarga2026_2: async (semesterId?: number) => {
+        const response = await fetch(`${API_URL}/adjudicacion/cargar-2026-2`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ semester_id: semesterId }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al cargar la carga 2026-2');
+        return data;
+    },
+
     iniciarAdjudicacion: async (payload: {
         semester_id: number;
         period?: string;
