@@ -122,7 +122,8 @@ def solve(req: SolveRequest):
         epi_courses = []
         for c in clist:
             ntb, npb = (c.hours_theory + 1) // 2, (c.hours_practice + 1) // 2
-            for tid, n in ((c.theory_teacher_id, ntb), (c.practice_teacher_id, npb), (c.lab_teacher_id, 2 if c.has_lab else 0)):
+            nlb = (1 if c.hours_lab == 2 else 2) if c.has_lab else 0
+            for tid, n in ((c.theory_teacher_id, ntb), (c.practice_teacher_id, npb), (c.lab_teacher_id, nlb)):
                 if tid is not None and tid not in key_by_id:
                     raise HTTPException(422, f"El docente {tid} del curso '{c.name}' no viene en la lista de docentes")
                 if tid is not None:
@@ -152,7 +153,7 @@ def solve(req: SolveRequest):
             problems.append(f"{t.name}: tiene {have} bloques de 2h disponibles y necesita {n}")
     # Pre-chequeo de capacidad global de aulas (Lun-Vie x 7 bloques)
     total_tp_blocks = sum(c.n_theory_blocks + c.n_practice_blocks for sec in sections for c in sec.schedulable_courses)
-    total_lab_blocks = sum(2 for sec in sections for c in sec.schedulable_courses if c.has_lab)
+    total_lab_blocks = sum((1 if c.hours_lab == 2 else 2) for sec in sections for c in sec.schedulable_courses if c.has_lab)
     max_tp_cap = NUM_DAYS * NUM_SLOTS * req.max_theory_rooms
     max_lab_cap = NUM_DAYS * NUM_SLOTS * req.max_lab_rooms
     if req.max_theory_rooms > 0 and total_tp_blocks > max_tp_cap:

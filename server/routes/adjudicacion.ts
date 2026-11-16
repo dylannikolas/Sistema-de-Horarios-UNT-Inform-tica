@@ -587,7 +587,8 @@ router.post('/:id/generar', async (req: Request, res: Response) => {
         const courseRows = await poolCourses(proc.config);
         const cById = new Map<number, any>(courseRows.map(c => [c.id, c]));
         for (const s of confirmed) {
-            const key = `${s.course_id}|${s.section}`;
+            const isLab2 = s.session_type === 'Laboratorio L2';
+            const key = isLab2 ? `${s.course_id}|${s.section}|L2` : `${s.course_id}|${s.section}`;
             const c = cById.get(s.course_id) || {
                 id: s.course_id,
                 name: s.course_name,
@@ -602,7 +603,7 @@ router.post('/:id/generar', async (req: Request, res: Response) => {
             const e = courseMap.get(key);
             if (s.session_type === 'Teoria') { e.hours_theory = proc.config.custom_pool ? s.hours : (c.hours_theory || s.hours); e.theory_teacher_id = s.teacher_id; }
             if (s.session_type === 'Practica') { e.hours_practice = proc.config.custom_pool ? s.hours : (c.hours_practice || s.hours); e.practice_teacher_id = s.teacher_id; }
-            if (s.session_type === 'Laboratorio') { e.hours_lab = proc.config.custom_pool ? s.hours : (c.hours_lab || s.hours); e.has_lab = true; e.lab_teacher_id = s.teacher_id; }
+            if (s.session_type === 'Laboratorio' || isLab2) { e.hours_lab = proc.config.custom_pool ? s.hours : (c.hours_lab || s.hours); e.has_lab = true; e.lab_teacher_id = s.teacher_id; }
         }
         const tids = [...new Set(confirmed.map(s => s.teacher_id))];
         const confirmedHoursByTeacher = new Map<number, number>();
