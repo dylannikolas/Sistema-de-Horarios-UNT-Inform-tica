@@ -383,3 +383,58 @@ Sistema-de-Horarios-UNT-Inform-tica/
     ├── REGISTRO_PROYECTO.md         # Bitácora técnica, verificaciones y límites honestos
     └── DOCUMENTACION_FUNCIONAMIENTO_Y_CARGA.md # Este manual detallado
 ```
+
+---
+
+## 9. Credenciales de Usuarios de Prueba (Director, Administrador y Docentes)
+
+El login acepta tanto el **usuario corto** (ej. `jgutierrez`) como el **correo institucional** (`jgutierrez@unitru.edu.pe`).
+
+### 9.1 Cuentas de Dirección y Administración (`DIRECTOR` / `ADMIN`)
+
+| Usuario | Contraseña | Rol | Permisos |
+|---|---|---|---|
+| `director` | `director123` | `DIRECTOR` | Director de Escuela (gestión completa, iniciar/cargar adjudicación, saltar turnos, ejecutar solver CP-SAT, exportar a Excel) |
+| `admin` | `admin123` | `ADMIN` | Administrador del Sistema (mismos privilegios administrativos que el Director) |
+
+### 9.2 Cuentas de Docentes (`DOCENTE` — Plana EPI y Carga 2026-2)
+
+| Usuario | Contraseña | Docente | Categoría | Prelación | Horas Regl. / 2026-2 | Correo Institucional |
+|---|---|---|---|---|---|---|
+| `jgutierrez` | `DOC-01` | Jorge Luis Gutiérrez Gutiérrez | Principal | #1 | 20 h (12 h en 2026-2) | `jgutierrez@unitru.edu.pe` |
+| `jrodriguez` | `DOC-02` | José Antonio Rodríguez Melquiades | Principal | #2 | 20 h (12 h en 2026-2) | `jrodriguez@unitru.edu.pe` |
+| `csanchez` | `DOC-23` | Carlos Alberto Sánchez Ruiz | Principal | #3 | 20 h | `csanchez@unitru.edu.pe` |
+| `fvargas` | `DOC-24` | Fernando Enrique Vargas Silva | Principal | #4 | 20 h | `fvargas@unitru.edu.pe` |
+| `ccastillod` | `DOC-03` | Carlos Enrique Castillo Diestra | Asociado | #1 | 18 h (16 h en 2026-2) | `ccastillod@unitru.edu.pe` |
+| `ysifuentes` | `DOC-04` | Yenny Milagros Sifuentes Díaz | Asociado | #2 | 18 h (12 h en 2026-2) | `ysifuentes@unitru.edu.pe` |
+| `jcruz` | `DOC-05` | José Gabriel Cruz Silva | Asociado | #3 | 18 h (22 h en 2026-2) | `jcruz@unitru.edu.pe` |
+| `emendoza` | `DOC-06` | Edwin Raúl Mendoza Torres | Asociado | #4 | 18 h (12 h en 2026-2) | `emendoza@unitru.edu.pe` |
+| `jsalazarc` | `DOC-07` | Juan Orlando Salazar Campos | Asociado | #5 | 18 h | `jsalazarc@unitru.edu.pe` |
+| `agomez` | `DOC-10` | Anthony José Gómez Morales | Asociado | #6 | 18 h (9 h Práct. Preprof.) | `agomez@unitru.edu.pe` |
+| `mrojasg` | `DOC-29` | María Teresita Rojas García | Asociado | #7 | 12 h (Estadística II-A/B) | `mrojasg@unitru.edu.pe` |
+| `ecastillop` | `DOC-30` | Esteban Castillo Pereda | Asociado | #8 | 12 h (Análisis Mat. II-A/B) | `ecastillop@unitru.edu.pe` |
+| `icruz` | `DOC-08` | Iris Áurea Cruz Florián | Auxiliar | #1 | 16 h (18 h en 2026-2) | `icruz@unitru.edu.pe` |
+| `jperalta` | `DOC-09` | José Luis Peralta Luján | Auxiliar | #2 | 16 h (18 h en 2026-2) | `jperalta@unitru.edu.pe` |
+| `rguevara` | `DOC-11` | Ricardo Manuel Guevara Ruiz | Auxiliar | #3 | 16 h (16 h en 2026-2) | `rguevara@unitru.edu.pe` |
+| `lpedro` | `DOC-12` | Liz Sofía Raymunda Pedro Huamán | Auxiliar | #4 | 16 h (18 h en 2026-2) | `lpedro@unitru.edu.pe` |
+| `vpolo` | `DOC-13` | Víctor Jaime Polo Romero | Auxiliar | #5 | 16 h (6 h en 2026-2) | `vpolo@unitru.edu.pe` |
+| `cmquispe` | `DOC-14` | Celestino Medardo Quispe Varón | Auxiliar | #6 | 16 h (18 h en 2026-2) | `cmquispe@unitru.edu.pe` |
+| `ppereyra` | `DOC-15` | Patricia Gissella Pereyra Salvador | Auxiliar | #7 | 16 h | `ppereyra@unitru.edu.pe` |
+| `fpacheco` | `DOC-16` | Juan Francisco Pacheco Torres | Auxiliar | #8 | 16 h (8 h en 2026-2) | `fpacheco@unitru.edu.pe` |
+| `jbravo` | `DOC-17` | Jorge David Bravo Escalante | Contratado | #1 | 12 h (18 h en 2026-2) | `jbravo@unitru.edu.pe` |
+| `lramirezc` | `DOC-18` | Lourdes Ramírez Cerna / Cajachuan | Contratado | #2 | 12 h (12 h en 2026-2) | `lramirezc@unitru.edu.pe` |
+| `jalvarador` | `DOC-19` | Jorge Luis Alvarado Ramos | Contratado | #3 | 12 h (20 h en 2026-2) | `jalvarador@unitru.edu.pe` |
+| `yurquizo` | `DOC-20` | Yosip Vladimir Urquizo Gómez | Contratado | #4 | 12 h (8 h en 2026-2) | `yurquizo@unitru.edu.pe` |
+| `mabantoco` | `DOC-21` | Manuel Regilder Abanto Corcuera | Contratado | #5 | 12 h (6 h en 2026-2) | `mabantoco@unitru.edu.pe` |
+| `msalcedo` | `DOC-22` | Martín Gustavo Salcedo Quiñones | Contratado | #6 | 12 h | `msalcedo@unitru.edu.pe` |
+| `mcastro` | `DOC-26` | Max Castro Rodríguez | Contratado | #7 | 16 h (Org. Archivos IV-A/B) | `mcastro@unitru.edu.pe` |
+| `wapaza` | `DOC-27` | Wilmer Apaza Chávez | Contratado | #8 | 12 h (Arq. VI-B + Tópicos X) | `wapaza@unitru.edu.pe` |
+| `epelaez` | `DOC-28` | Edgard José Peláez Vinces | Contratado | #9 | 8 h (Sociedad II-A/B) | `epelaez@unitru.edu.pe` |
+| `salfaro` | `DOC-31` | Silvia Alfaro Luján | Contratado | #10 | 8 h (Cultura Inv. II-A/B) | `salfaro@unitru.edu.pe` |
+| `mmori` | `DOC-32` | Miguel Mori | Contratado | #11 | 4 h (Ética II-A) | `mmori@unitru.edu.pe` |
+| `cchavez` | `DOC-33` | Cesario Carlos Chávez | Contratado | #12 | 4 h (Ética II-B) | `cchavez@unitru.edu.pe` |
+| `egenerales` | `DOC-34` | Estudios Generales (Talleres) | Contratado | #13 | 8 h (Talleres II-A/B) | `egenerales@unitru.edu.pe` |
+| `wzubiaga` | `DOC-35` | Willy Zubiaga Vera | Contratado | #14 | 6 h (Geometría Analítica III-R) | `wzubiaga@unitru.edu.pe` |
+| `jbecerra` | `DOC-36` | Julio Becerra | Contratado | #15 | 6 h (Matemática Discreta III-R) | `jbecerra@unitru.edu.pe` |
+| `lponte` | `DOC-37` | Luis Ponte | Contratado | #16 | 6 h (Intro. Análisis Mat. III-R) | `lponte@unitru.edu.pe` |
+| `rleon` | `DOC-38` | Ronal León | Contratado | #17 | 2 h (Análisis Numérico III-R) | `rleon@unitru.edu.pe` |
